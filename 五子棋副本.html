@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>五子棋副本</title>
+		<style type="text/css">
+			canvas{
+				display: block;
+				margin: 100px auto;
+				box-shadow: -10px -10px 10px deepskyblue,10px 10px 10px orangered;
+			}
+			.choose{
+				width: 200px;
+				height: 100px;
+				/*border: 1px solid black;*/
+				position: absolute;
+				top: 0;
+				left: 50%;
+				margin-left: -100px;
+				text-align: center;
+			}
+			#restart{
+				font-size: 24px;
+				margin-top: 20%;
+				border: none;
+				background-color: deepskyblue;
+				color: gold;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="choose">
+			<button id="restart">重新开始</button>
+		</div>
+		<canvas id="chess" width="600px" height="600px"></canvas>
+		<script type="text/javascript">
+			var rs = document.getElementById("restart");
+			rs.onclick = function(){
+				window.location.reload();
+			}
+			
+			
+			var chess = document.getElementById("chess");
+			var context = chess.getContext("2d");
+			var me = true;
+			var over = false;
+			
+			var chessTable = [];
+			for (var i=0; i<15; i++) {
+				chessTable[i] = [];
+				for (var j=0; j<15; j++) {
+					chessTable[i][j] = 0;
+				}
+			}
+			//赢法数组
+			var wins = [];
+			for (var i=0; i<15;i++) {
+				wins[i] = [];
+				for (var j=0; j<15; j++) {
+					wins[i][j] = [];
+				}
+			}
+			
+			var count = 0;
+			for (var i=0; i<15; i++){
+				for (var j=0; j<11; j++) {
+					for (var k=0; k<5; k++) {
+						wins[i][j+k][count] = true;
+					}
+					count++;
+				}
+			}
+			//横线
+			
+			for (var i=0; i<11; i++){
+				for (var j=0; j<15; j++) {
+					for (var k=0; k<5; k++) {
+						wins[i+k][j][count] = true;
+					}
+					count++;
+				}
+			}
+			//竖线
+			
+			for (var i=0; i<11; i++){
+				for (var j=0; j<11; j++) {
+					for (var k=0; k<5; k++) {
+						wins[i+k][j+k][count] = true;
+					}
+					count++;
+				}
+			}
+			//斜线
+			
+			for (var i=0; i<11; i++){
+				for (var j=14; j>3; j--) {
+					for (var k=0; k<5; k++) {
+						wins[i+k][j-k][count] = true;
+					}
+					count++;
+				}
+			}
+			//反斜线
+			console.log(count);//有多少种赢法
+			
+			
+			//赢法的统计数组
+			var myWin = [];
+			var computerWin = [];
+			for (var i=0; i<count; i++) {
+				myWin[i] = 0;
+				computerWin[i] = 0;
+			}//初始化
+			
+			var drawChessMap = function () {
+				for (var i=0; i<15; i++){
+					context.moveTo(20+i*40,20);
+					context.lineTo(20+i*40,580);
+					context.stroke();
+					//竖线
+					
+					context.moveTo(20,20+i*40);
+					context.lineTo(580,20+i*40);
+					context.stroke();
+					//横线
+				}
+			}
+			var logo = new Image;
+			logo.src = "img/背景.png";
+			logo.onload = function(){
+				context.drawImage(logo,0,0,600,600);
+				drawChessMap();
+			}
+			var oneStep = function (i,j,m) {
+				context.beginPath();
+				context.arc(20+i*40, 20+j*40, 20, 0, 2*Math.PI);
+				context.closePath();
+				var gradient = context.createRadialGradient(20+i*40 +3, 20+j*40 +3, 20, 20+i*40 +3, 20+j*40 +3, 5);				
+				if(m) {
+					gradient.addColorStop(0, "red");
+					gradient.addColorStop(1, "blue")
+				} else {
+					gradient.addColorStop(0, "black");
+					gradient.addColorStop(1, "white");
+				}			
+				context.fillStyle = gradient;
+				context.fill();
+			}
+			
+			chess.onclick = function (e) {
+				if (over) {
+					return;
+				}
+				if (!me) {
+					return;
+				}
+				var x = e.offsetX;
+				var y = e.offsetY;
+				var i = Math.floor(x / 40);
+				var j = Math.floor(y / 40);
+				if (chessTable[i][j] == 0 ){
+					oneStep(i,j,me);
+					chessTable[i][j] = 1;
+					for (var k=0; k<count; k++) {
+						if (wins[i][j][k]) {
+							myWin[k]++;
+							computerWin[k] = 6;
+							if ( myWin[k] ==5){
+								window.alert("你赢了");
+								over = true;
+							}
+						}
+					}
+					if (!over) {
+						me = !me;
+						computerAI();
+					}
+				}
+			}
+			
+			var computerAI = function(){
+				var myScore = [];
+				var computerScore = [];
+				var max = 0;//保存最高分数
+				var u = 0;
+				var v = 0;
+				
+				for (var i=0; i<15; i++) {
+					myScore[i] = [];
+					computerScore[i] = [];
+					for (var j=0; j<15; j++) {
+						myScore[i][j] = 0;
+						computerScore[i][j] = 0;
+					}
+				}
+				//初始化 myScore computerScore
+				
+				for(var i=0; i<15; i++){
+					for(var j=0; j<15; j++){
+						if(chessTable[i][j] == 0) {
+							for (var k=0; k<count; k++) {
+								if(wins[i][j][k]) {
+									if(myWin[k] == 1){
+										myScore[i][j] += 200;
+									} else if (myWin[k] == 2){
+										myScore[i][j] += 400;
+									} else if (myWin[k] == 3){
+										myScore[i][j] += 2000;
+									} else if (myWin[k] == 4){
+										myScore[i][j] += 10000;
+									}
+									if(computerWin[k] == 1){
+										computerScore[i][j] += 220;
+									} else if (computerWin[k] == 2){
+										computerScore[i][j] += 420;
+									} else if (computerWin[k] == 3){
+										computerScore[i][j] += 2100;
+									} else if (computerWin[k] == 4){
+										computerScore[i][j] += 20000;
+									}
+								}//比较2者分数的高低
+							}
+							
+							if (myScore[i][j] > max) {
+								max = myScore[i][j];
+								u = i;
+								v = j;
+							} else if (myScore[i][j] == max){
+								if (computerScore[i][j] > computerScore[u][v]) {
+									u = i;
+									v = j;
+								}
+							}
+							
+							if (computerScore[i][j] > max) {
+								max = computerScore[i][j];
+								u = i;
+								v = j;
+							} else if (computerScore[i][j] == max){
+								if (myScore[i][j] > myScore[u][v]) {
+									u = i;
+									v = j;
+								}
+							}						
+						}	
+					}
+				}
+			oneStep(u,v,false);
+			chessTable[u][v] = 2;
+			for (var k=0; k<count; k++) {
+				if (wins[u][v][k]) {
+					computerWin[k]++;
+						myWin[k] = 6;
+						if ( computerWin[k] ==5){
+							window.alert("你输了");
+							over = true;
+						}
+					}
+				}
+				if (!over) {
+					me = !me;
+				}					
+			}
+			
+			
+		</script>
+	</body>
+</html>
